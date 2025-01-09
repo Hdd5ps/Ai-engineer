@@ -5,6 +5,8 @@ from datetime import datetime, timedelta, date, timezone
 from dateutil.parser import parse as is_date
 
 # Import namespaces
+from azure.core.credentials import AzureKeyCredential
+from azure.ai.language.conversations import ConversationAnalysisClient
 
 
 def main():
@@ -22,11 +24,96 @@ def main():
             if userText.lower() != 'quit':
 
                 # Create a client for the Language service model
+                client = ConversationAnalysisClient(
+                    ls_prediction_endpoint, AzureKeyCredential(ls_prediction_key)
+                )
 
                 # Call the Language service model to get intent and entities
+                cls_project = 'Clock'
+                deployment_slot = 'production'
+
+                with client:
+                    query = userText
+                    result = client.analyze_conversation(
+                        task={
+                            "kind": "Conversation",
+                            "analysisInput": {
+                                "conversationItem": {
+                                    "participantId": "1",
+                                    "id": "1",
+                                    "modality": "text",
+                                    "language": "en",
+                                    "text": query
+                                },
+                        
+                            "isLoggingEnabled": False
+                            },
+                        "parameters": {
+                            "projectName": cls_project,
+                            "deploymentName": deployment_slot,
+                            "verbose": True
+                        }
+                        }
+                    )
+
+                    top_intent = result["result"]["prediction"]["topIntent"]
+                    entities = result["result"]["prediction"]["entities"]
+
+                    print("view top intent:")
+                    print("\ttop intent: {}".format(result["result"]["prediction"]["topIntent"]))
+                    print("\tcategory: {}".format(result["result"]["prediction"]["intents"][0]["category"]))
+                    print("\tconfidence score: {}\n".format(result["result"]["prediction"]["intents"][0]["confidenceScore"]))
+
+                    print("view entities:")
+                    for entity in entities:
+                        print("\tcategory: {}".format(entity["category"]))
+                        print("\ttext: {}".format(entity["text"]))
+                        print("\tconfidence score: {}".format(entity["confidenceScore"]))
+
+                    print("query: {}".format(result["result"]["query"]))
 
                 # Apply the appropriate action
+                if top_intent == 'GetTime':
+                    location = 'local'
+                    #check for entities
+                    if len(entities) > 0:
+                        #check for a location entity
+                        for entity in entities:
+                            if 'Location' == entity["category"]:
+                                # ML entities are strings, get the first one
+                                location = entity["text"]
+                    #get the time for the specified location
+                    print(GetTime(location))
 
+                elif top_intent == 'GetDay':
+                    date_string = date.today().strftime("%m/%d/%Y")
+                    #check for entities
+                    if len(entities) > 0:
+                        #check for a date entity
+                        for entity in entities:
+                            if 'Date' == entity["category"]:
+                                # regex entities are strings, get the first one
+                                date_string = entity["text"]
+                        #get the dat for the specified date
+                        print(GetDay(date_string))
+
+                elif top_intent == 'GetDate':
+                    day - 'today'
+                    #check for entities
+                    if len(entities) > 0:
+                        #check for a Weekday entity
+                        for entity in entities:
+                            if 'Weekday' == entity["category"]:
+                                #list entities are lists
+                                day = entity["text"]
+                    #get the date for the specified day
+                    print(GetDate(day))
+                
+                else:
+                    #some other intent (for example, "none") was predicted
+                    print('Try asking me for the time, the day, or the date.')
+
+                    
     except Exception as ex:
         print(ex)
 
