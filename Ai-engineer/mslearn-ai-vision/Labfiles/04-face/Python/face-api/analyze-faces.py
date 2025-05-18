@@ -4,9 +4,6 @@ from PIL import Image, ImageDraw
 from matplotlib import pyplot as plt
 
 # Import namespaces
-from azure.ai.vision.face import FaceClient
-from azure.ai.vision.face.models import FaceDetectionModel, FaceRecognitionModel, FaceAttributeTypeRecognition01
-from azure.core.credentials import AzureKeyCredential
 
 
 def main():
@@ -20,10 +17,6 @@ def main():
         cog_key = os.getenv('AI_SERVICE_KEY')
 
         # Authenticate Face client
-        face_client = FaceClient(
-            endpoint=cog_endpoint,
-            credential=AzureKeyCredential(cog_key)
-        )
 
 
         # Menu for face functions
@@ -39,75 +32,10 @@ def DetectFaces(image_file):
     print('Detecting faces in', image_file)
 
     # Specify facial features to be retrieved
-    features = [FaceAttributeTypeRecognition03.HEAD_POSE,
-                FaceAttributeTypeRecognition03.OCCLUSION,
-                FaceAttributeTypeRecognition03.ACCESSORIES]
 
 
     # Get faces
-    with open(image_file, mode="rb") as image_data:
-        detected_faces = face_client.detect(
-            image_content=image_data.read(),
-            detection_model=FaceDetectionModel.DETECTION01,
-            recognition_model=FaceRecognitionModel.RECOGNITION01,
-            return_face_id=False,
-            return_face_attributes=features,
-        )
 
-        face_count = 0
-        if len(detected_faces) > 0:
-            print(len(detected_faces), 'face detected.')
-            for face in detected_faces:
 
-                # Get face properties
-                face_count += 1
-                print('\nFace number {}'.format(face_count))
-                print(' - Head Pose (Yaw): {}'.format(face.face_attributes.head_pose.yaw))
-                print(' - Head Pose (Pitch): {}'.format(face.face_attributes.head_pose.pitch))
-                print(' - Head Pose (Roll): {}'.format(face.face_attributes.head_pose.roll))
-                print(' - Forehead occluded?: {}'.format(face.face_attributes.occlusion["foreheadOccluded"]))
-                print(' - Eye occluded?: {}'.format(face.face_attributes.occlusion["eyeOccluded"]))
-                print(' - Mouth occluded?: {}'.format(face.face_attributes.occlusion["mouthOccluded"]))
-                print(' - Accessories:')
-                for accessory in face.face_attributes.accessories:
-                    print('    -{}'.format(accessory.type))
-                # Annotate faces in the image
-                annotate_faces(image_file, detected_faces)
-
-            # prepare image for drawing
-            fig = plt.figure(figsize=(8, 6))
-            plt.axis('off')
-            image = Image.open(image_file)
-            draw = ImageDraw.Draw(image)
-            color = 'lightgreen'
-            face_count = 0
-
-            #draw and annotate each face
-            for face in detected_faces:
-
-                #get face properties
-                face_count+=1
-                print('\nFace number {}'.format(face_count))
-
-                print(' - Head Pose (Yaw): {}'.format(face.face_attributes.head_pose.yaw))
-                print(' - Head Pose (Pitch): {}'.format(face.face_attributes.head_pose.pitch))
-                print(' - Head Pose (Roll): {}'.format(face.face_attributes.head_pose.roll))
-                print(' - Blur: {}'.format(face.face_attributes.blur.blur_level))
-                print(' - Mask: {}'.format(face.face_attributes.mask.type))
-
-                # draw and annotate face
-                r = face.face_rectangle
-                bounding_box = ((r.left, r.top), (r.left + r.width, r.top + r.height), )
-                draw = ImageDraw.Draw(image)
-                draw.rectangle(bounding_box, outline=color, width=5)
-                annotation = 'Face numbe {}'.format(face_count)
-                plt.annotate(annotation,(r.left, r.top), backgroundcolor=color)
-
-            #savve annotated image
-            plt.imshow(image)
-            outfile = 'detected_faces.jpg'
-            fig.savefig(outfile)
-
-            print('\nResults saved in', outfile)
 if __name__ == "__main__":
     main()
